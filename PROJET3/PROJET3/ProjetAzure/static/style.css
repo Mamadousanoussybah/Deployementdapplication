@@ -1,0 +1,14 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+#thumbnails img {
+    width: 128px;
+    height: 128px;
+    margin: 10px;
+    border: 1px solid #ccc;
+}
+#gridsize img {
+    margin: 6px; border: 4px;
+}

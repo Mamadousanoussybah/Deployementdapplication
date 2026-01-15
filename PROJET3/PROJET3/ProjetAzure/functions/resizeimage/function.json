@@ -1,0 +1,12 @@
+{
+  "scriptFile": "_init_.py",
+  "bindings": [
+    {
+      "name": "myblob",
+      "type": "blobTrigger",
+      "direction": "in",
+      "path": "mesimages/{name}",
+      "connection": "AzureWebJobsStorage"
+    }
+  ]
+}

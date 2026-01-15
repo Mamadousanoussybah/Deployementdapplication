@@ -1,0 +1,112 @@
+name: Deploy Azure Functions and Static Website
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    # =========================
+    # VARIABLES GLOBALES AZURE
+    # =========================
+    env:
+      AZURE_SUBSCRIPTION_ID: "AzureConnection-WebApp1"
+      AZURE_RESOURCE_GROUP: "MSB"
+      FUNCTION_APP_NAME: "sane"
+      STORAGE_ACCOUNT_NAME: "sanoussy"
+
+    steps:
+
+      ############################################################
+      # Récupération du code source
+      ############################################################
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      ############################################################
+      #  Connexion à Azure (SUBSCRIPTION)
+      ############################################################
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      ############################################################
+      # Sélection explicite de la souscription Azure
+      ############################################################
+      - name: Set Azure Subscription
+        run: |
+          az account set --subscription $AZURE_SUBSCRIPTION_ID
+        # Cette étape garantit que toutes les commandes utilisent la bonne souscription
+
+      ############################################################
+      #  Installation de Python
+      ############################################################
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      ############################################################
+      #  Installation de Node.js
+      ############################################################
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      ############################################################
+      #  Installation des Azure Functions Core Tools
+      ############################################################
+      - name: Install Azure Functions Core Tools
+        run: npm install -g azure-functions-core-tools@4 --unsafe-perm true
+
+      ############################################################
+      #  Installation des dépendances Python
+      ############################################################
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      ############################################################
+      #  Déploiement des Azure Functions
+      ############################################################
+      - name: Deploy Azure Functions
+        uses: azure/functions-action@v1
+        with:
+          app-name: ${{ env.FUNCTION_APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          package: '.'
+
+      ############################################################
+      #  Vérification de la Function App
+      ############################################################
+      - name: Verify Function App
+        run: |
+          az functionapp show \
+            --name $FUNCTION_APP_NAME \
+            --resource-group $AZURE_RESOURCE_GROUP \
+            --query "{name:name,state:state,host:defaultHostName}"
+
+      ############################################################
+      #  Déploiement du site statique (Blob Storage)
+      ############################################################
+      - name: Deploy Static Website
+        run: |
+          az storage blob upload-batch \
+            --account-name $STORAGE_ACCOUNT_NAME \
+            --source ./static \
+            --destination \$web \
+            --overwrite
+        env:
+          AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
+
+      ############################################################
+      #  Fin
+      ############################################################
+      - name: Deployment complete
+        run: echo " Déploiement terminé sur la souscription Azure"
