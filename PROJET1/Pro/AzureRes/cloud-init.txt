@@ -1,38 +1,52 @@
-﻿# Enable IIS
+﻿# =============================================
+# Cloud Init sécurisé pour IIS + .NET + déploiement
+# =============================================
+
+# 1️⃣ Installer IIS
 Install-WindowsFeature -Name Web-Server -IncludeManagementTools
 
-# Download and install .NET 9 Hosting Bundle
+# 2️⃣ Télécharger et installer le .NET 9 Hosting Bundle
 $bundleUrl = "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/9.0.9/dotnet-hosting-9.0.9-win.exe"
 $installer = "$env:TEMP\dotnet-hosting.exe"
 Invoke-WebRequest -Uri $bundleUrl -OutFile $installer
 Start-Process -FilePath $installer -ArgumentList "/quiet", "/norestart" -Wait
 
-# Optional: Install Visual C++ Redistributable
+# 3️⃣ (Optionnel) Installer Visual C++ Redistributable
 $vcUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 $vcInstaller = "$env:TEMP\vc_redist.exe"
 Invoke-WebRequest -Uri $vcUrl -OutFile $vcInstaller
 Start-Process -FilePath $vcInstaller -ArgumentList "/quiet", "/norestart" -Wait
 
-# Deploy your app
-$pat = "AUTH_HEADER_PLACEHOLDER"
+# 4️⃣ Déployer l'application
+# Remarque : aucune information sensible n'est codée
+# Les secrets / tokens doivent être fournis via variables d'environnement
+$pat = $env:AZURE_DEVOPS_PAT         # <- Variable d'environnement pour authentification
+$artifactUrl = $env:ARTIFACT_URL    # <- Variable d'environnement pour l'URL du fichier à déployer
+
+if (-not $pat) { Write-Error "❌ AZURE_DEVOPS_PAT non défini"; exit 1 }
+if (-not $artifactUrl) { Write-Error "❌ ARTIFACT_URL non défini"; exit 1 }
+
 $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat"))
-$headers = @{
-    Authorization = "Basic $base64AuthInfo"
-}
+$headers = @{ Authorization = "Basic $base64AuthInfo" }
+
 $appPath = "C:\inetpub\wwwroot\MyApp"
 New-Item -ItemType Directory -Path $appPath -Force
-Invoke-WebRequest -Uri "ARTIFACT_URL_PLACEHOLDER" -Headers $headers -OutFile "$env:TEMP\MyApp.zip"
-Expand-Archive "$env:TEMP\MyApp.zip" -DestinationPath $appPath -Force
-Expand-Archive "$appPath\AspWebApp-win-x64\Asp Web App.zip" -DestinationPath $appPath -Force
 
-# Remove Default Web Site if it exists
+# Télécharger l'application
+Invoke-WebRequest -Uri $artifactUrl -Headers $headers -OutFile "$env:TEMP\MyApp.zip"
+
+# Extraire l'application
+Expand-Archive "$env:TEMP\MyApp.zip" -DestinationPath $appPath -Force
+
+# Supprimer le site par défaut IIS si nécessaire
 if (Test-Path "IIS:\Sites\Default Web Site") {
     Remove-WebSite -Name "Default Web Site"
     Write-Host "🧹 Removed Default Web Site"
 }
 
-# Configure IIS site
+# Configurer et démarrer le site IIS
 Import-Module WebAdministration
 New-WebSite -Name "MyApp" -Port 80 -PhysicalPath $appPath -Force
 Start-WebSite -Name "MyApp"
+
 Write-Host "🚀 MyApp site deployed and started successfully"
