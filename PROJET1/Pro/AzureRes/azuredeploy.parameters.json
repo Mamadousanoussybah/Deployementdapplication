@@ -1,0 +1,129 @@
+﻿{
+    "$schema":  "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion":  "1.0.0.0",
+    "parameters":  {
+                       "location":  {
+                                        "value":  "East US"
+                                    },
+                       "networkInterfaceName1":  {
+                                                     "value":  "sanoussy472_z1"
+                                                 },
+                       "enableAcceleratedNetworking":  {
+                                                           "value":  true
+                                                       },
+                       "networkSecurityGroupName":  {
+                                                        "value":  "Sanoussy-nsg"
+                                                    },
+                       "networkSecurityGroupRules":  {
+                                                         "value":  [
+                                                                       {
+                                                                           "name":  "RDP",
+                                                                           "properties":  {
+                                                                                              "priority":  300,
+                                                                                              "protocol":  "TCP",
+                                                                                              "access":  "Allow",
+                                                                                              "direction":  "Inbound",
+                                                                                              "sourceAddressPrefix":  "*",
+                                                                                              "sourcePortRange":  "*",
+                                                                                              "destinationAddressPrefix":  "*",
+                                                                                              "destinationPortRange":  "3389"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "name":  "HTTP",
+                                                                           "properties":  {
+                                                                                              "priority":  320,
+                                                                                              "protocol":  "TCP",
+                                                                                              "access":  "Allow",
+                                                                                              "direction":  "Inbound",
+                                                                                              "sourceAddressPrefix":  "*",
+                                                                                              "sourcePortRange":  "*",
+                                                                                              "destinationAddressPrefix":  "*",
+                                                                                              "destinationPortRange":  "80"
+                                                                                          }
+                                                                       }
+                                                                   ]
+                                                     },
+                       "subnetName":  {
+                                          "value":  "default"
+                                      },
+                       "virtualNetworkName":  {
+                                                  "value":  "Sanoussy-vnet"
+                                              },
+                       "addressPrefixes":  {
+                                               "value":  [
+                                                             "10.0.0.0/16"
+                                                         ]
+                                           },
+                       "subnets":  {
+                                       "value":  [
+                                                     {
+                                                         "name":  "default",
+                                                         "properties":  {
+                                                                            "addressPrefix":  "10.0.0.0/24"
+                                                                        }
+                                                     }
+                                                 ]
+                                   },
+                       "publicIpAddressName1":  {
+                                                    "value":  "Sanoussy-ip"
+                                                },
+                       "publicIpAddressType":  {
+                                                   "value":  "Static"
+                                               },
+                       "publicIpAddressSku":  {
+                                                  "value":  "Standard"
+                                              },
+                       "pipDeleteOption":  {
+                                               "value":  "Detach"
+                                           },
+                       "virtualMachineName":  {
+                                                  "value":  "Sanoussy"
+                                              },
+                       "virtualMachineName1":  {
+                                                   "value":  "Sanoussy"
+                                               },
+                       "virtualMachineComputerName1":  {
+                                                           "value":  "Sanoussy"
+                                                       },
+                       "virtualMachineRG":  {
+                                                "value":  "Sanoussy"
+                                            },
+                       "osDiskType":  {
+                                          "value":  "Premium_LRS"
+                                      },
+                       "osDiskDeleteOption":  {
+                                                  "value":  "Delete"
+                                              },
+                       "virtualMachineSize":  {
+                                                  "value":  "Standard_D2s_v3"
+                                              },
+                       "nicDeleteOption":  {
+                                               "value":  "Detach"
+                                           },
+                       "hibernationEnabled":  {
+                                                  "value":  false
+                                              },
+                       "adminUsername":  {
+                                             "value":  "Sanoussy"
+                                         },
+                       "adminPassword":  {
+                                             "value":  "string"
+                                         },
+                       "patchMode":  {
+                                         "value":  "AutomaticByOS"
+                                     },
+                       "enablePeriodicAssessment":  {
+                                                        "value":  "ImageDefault"
+                                                    },
+                       "enableHotpatching":  {
+                                                 "value":  false
+                                             },
+                       "customData":  {
+                                          "value":  "IyBFbmFibGUgSUlTDQpJbnN0YWxsLVdpbmRvd3NGZWF0dXJlIC1OYW1lIFdlYi1TZXJ2ZXIgLUluY2x1ZGVNYW5hZ2VtZW50VG9vbHMNCg0KIyBEb3dubG9hZCBhbmQgaW5zdGFsbCAuTkVUIDkgSG9zdGluZyBCdW5kbGUNCiRidW5kbGVVcmwgPSAiaHR0cHM6Ly9idWlsZHMuZG90bmV0Lm1pY3Jvc29mdC5jb20vZG90bmV0L2FzcG5ldGNvcmUvUnVudGltZS85LjAuOS9kb3RuZXQtaG9zdGluZy05LjAuOS13aW4uZXhlIg0KJGluc3RhbGxlciA9ICIkZW52OlRFTVBcZG90bmV0LWhvc3RpbmcuZXhlIg0KSW52b2tlLVdlYlJlcXVlc3QgLVVyaSAkYnVuZGxlVXJsIC1PdXRGaWxlICRpbnN0YWxsZXINClN0YXJ0LVByb2Nlc3MgLUZpbGVQYXRoICRpbnN0YWxsZXIgLUFyZ3VtZW50TGlzdCAiL3F1aWV0IiwgIi9ub3Jlc3RhcnQiIC1XYWl0DQoNCiMgT3B0aW9uYWw6IEluc3RhbGwgVmlzdWFsIEMrKyBSZWRpc3RyaWJ1dGFibGUNCiR2Y1VybCA9ICJodHRwczovL2FrYS5tcy92cy8xNy9yZWxlYXNlL3ZjX3JlZGlzdC54NjQuZXhlIg0KJHZjSW5zdGFsbGVyID0gIiRlbnY6VEVNUFx2Y19yZWRpc3QuZXhlIg0KSW52b2tlLVdlYlJlcXVlc3QgLVVyaSAkdmNVcmwgLU91dEZpbGUgJHZjSW5zdGFsbGVyDQpTdGFydC1Qcm9jZXNzIC1GaWxlUGF0aCAkdmNJbnN0YWxsZXIgLUFyZ3VtZW50TGlzdCAiL3F1aWV0IiwgIi9ub3Jlc3RhcnQiIC1XYWl0DQoNCiMgRGVwbG95IHlvdXIgYXBwDQokcGF0ID0gIjFCVVQ1YVA2bTc3Z1dwYWp5cWdOMmdja056anhWNThHZWFXVXpuUURuUmVtajVxTW91bzhKUVFKOTlCSUFDQUFBQUFBQUFBQUFBQVNBWkRPMjQ2UCINCiRiYXNlNjRBdXRoSW5mbyA9IFtDb252ZXJ0XTo6VG9CYXNlNjRTdHJpbmcoW1RleHQuRW5jb2RpbmddOjpBU0NJSS5HZXRCeXRlcygiOiRwYXQiKSkNCiRoZWFkZXJzID0gQHsNCiAgICBBdXRob3JpemF0aW9uID0gIkJhc2ljICRiYXNlNjRBdXRoSW5mbyINCn0NCiRhcHBQYXRoID0gIkM6XGluZXRwdWJcd3d3cm9vdFxNeUFwcCINCk5ldy1JdGVtIC1JdGVtVHlwZSBEaXJlY3RvcnkgLVBhdGggJGFwcFBhdGggLUZvcmNlDQpJbnZva2UtV2ViUmVxdWVzdCAtVXJpICJodHRwczovL2Rldi5henVyZS5jb20vbWFtYWRvdXNhbm91c3N5YmFoMDEvX2FwaXMvcmVzb3VyY2VzL0NvbnRhaW5lcnMvNzAxNTg3NjIvQXNwV2ViQXBwLXdpbi14NjQ/aXRlbVBhdGg9QXNwV2ViQXBwLXdpbi14NjQlMkZXZWJBcC56aXAiIC1IZWFkZXJzICRoZWFkZXJzIC1PdXRGaWxlICIkZW52OlRFTVBcTXlBcHAuemlwIg0KRXhwYW5kLUFyY2hpdmUgIiRlbnY6VEVNUFxNeUFwcC56aXAiIC1EZXN0aW5hdGlvblBhdGggJGFwcFBhdGggLUZvcmNlDQpFeHBhbmQtQXJjaGl2ZSAiJGFwcFBhdGhcQXNwV2ViQXBwLXdpbi14NjRcQXNwIFdlYiBBcHAuemlwIiAtRGVzdGluYXRpb25QYXRoICRhcHBQYXRoIC1Gb3JjZQ0KDQojIFJlbW92ZSBEZWZhdWx0IFdlYiBTaXRlIGlmIGl0IGV4aXN0cw0KaWYgKFRlc3QtUGF0aCAiSUlTOlxTaXRlc1xEZWZhdWx0IFdlYiBTaXRlIikgew0KICAgIFJlbW92ZS1XZWJTaXRlIC1OYW1lICJEZWZhdWx0IFdlYiBTaXRlIg0KICAgIFdyaXRlLUhvc3QgIvCfp7kgUmVtb3ZlZCBEZWZhdWx0IFdlYiBTaXRlIg0KfQ0KDQojIENvbmZpZ3VyZSBJSVMgc2l0ZQ0KSW1wb3J0LU1vZHVsZSBXZWJBZG1pbmlzdHJhdGlvbg0KTmV3LVdlYlNpdGUgLU5hbWUgIk15QXBwIiAtUG9ydCA4MCAtUGh5c2ljYWxQYXRoICRhcHBQYXRoIC1Gb3JjZQ0KU3RhcnQtV2ViU2l0ZSAtTmFtZSAiTXlBcHAiDQpXcml0ZS1Ib3N0ICLwn5qAIE15QXBwIHNpdGUgZGVwbG95ZWQgYW5kIHN0YXJ0ZWQgc3VjY2Vzc2Z1bGx5Ig0K"
+                                      },
+                       "virtualMachine1Zone":  {
+                                                   "value":  "1"
+                                               }
+                   }
+}

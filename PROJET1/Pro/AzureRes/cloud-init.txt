@@ -1,0 +1,38 @@
+﻿# Enable IIS
+Install-WindowsFeature -Name Web-Server -IncludeManagementTools
+
+# Download and install .NET 9 Hosting Bundle
+$bundleUrl = "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/9.0.9/dotnet-hosting-9.0.9-win.exe"
+$installer = "$env:TEMP\dotnet-hosting.exe"
+Invoke-WebRequest -Uri $bundleUrl -OutFile $installer
+Start-Process -FilePath $installer -ArgumentList "/quiet", "/norestart" -Wait
+
+# Optional: Install Visual C++ Redistributable
+$vcUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+$vcInstaller = "$env:TEMP\vc_redist.exe"
+Invoke-WebRequest -Uri $vcUrl -OutFile $vcInstaller
+Start-Process -FilePath $vcInstaller -ArgumentList "/quiet", "/norestart" -Wait
+
+# Deploy your app
+$pat = "AUTH_HEADER_PLACEHOLDER"
+$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat"))
+$headers = @{
+    Authorization = "Basic $base64AuthInfo"
+}
+$appPath = "C:\inetpub\wwwroot\MyApp"
+New-Item -ItemType Directory -Path $appPath -Force
+Invoke-WebRequest -Uri "ARTIFACT_URL_PLACEHOLDER" -Headers $headers -OutFile "$env:TEMP\MyApp.zip"
+Expand-Archive "$env:TEMP\MyApp.zip" -DestinationPath $appPath -Force
+Expand-Archive "$appPath\AspWebApp-win-x64\Asp Web App.zip" -DestinationPath $appPath -Force
+
+# Remove Default Web Site if it exists
+if (Test-Path "IIS:\Sites\Default Web Site") {
+    Remove-WebSite -Name "Default Web Site"
+    Write-Host "🧹 Removed Default Web Site"
+}
+
+# Configure IIS site
+Import-Module WebAdministration
+New-WebSite -Name "MyApp" -Port 80 -PhysicalPath $appPath -Force
+Start-WebSite -Name "MyApp"
+Write-Host "🚀 MyApp site deployed and started successfully"
