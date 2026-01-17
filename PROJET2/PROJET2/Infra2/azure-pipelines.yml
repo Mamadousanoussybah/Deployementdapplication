@@ -1,0 +1,126 @@
+﻿trigger:    # Début de la section définissant ce qui déclenche le pipeline
+- master
+
+pool:       # Section définissant quel pool d'agents utiliser
+  name: Default # On utilise le pool d'agents "Default"
+
+variables:   # Déclaration des variables globales, réutilisables dans tout le pipeline
+  azureServiceConnection: "+++++++++++++++++++++++"   # Nom de la connexion de service Azure DevOps
+  subscriptionId: '+++++++++++++'   # ID de l’abonnement Azure
+  resourceGroupName: '++++++++++++++++'    # Nom du groupe de ressources
+  location: '+++++++++++++' # Région Azure où déployer
+
+  hostingPlanName: 'asp-sane-prod'  # Nom du plan App Service (serveur web)
+  webAppName: 'webapp-sane-prod'      # Nom de l’application Web App cible
+  keyVaultName: '+++++++++++++'     # Nom du Key Vault utilisé par l’application
+
+  buildConfiguration: 'Release'   # Configuration utilisée pour compiler le projet .NET
+  artifactName: '+++++++++++++++'  # Nom donné à l’artefact publié par la phase de build
+
+  firstDeployment: false   # Si true → déploiement direct en production. Si false → déploiement dans un slot staging
+     
+                            # -------------------- STAGE BUILD --------------------
+
+stages:     # Début de la définition des différents stages (étapes majeures du pipeline)
+- stage: Build   # Premier stage nommé "Build"
+  displayName: "Build du site ASP.NET Core" # Nom lisible affiché dans Azure DevOps
+  jobs:    # Chaque stage contient un ou plusieurs jobs
+  - job: BuildJob  # Nom du job de build
+    pool: { name: 'Default' }  # Ce job utilise aussi le pool d'agents Default
+    steps:    # Liste des étapes dans le job
+    - checkout: self  # Télécharge le code source du repository dans l'agent
+    - task: DotNetCoreCLI@2  # Tâche .NET Core : exécute la commande dotnet build
+      displayName: "Build du projet"  # Nom affiché dans l'interface
+      inputs:  # Paramètres de la tâche
+        command: 'build' # Spécifie que nous voulons builder le projet
+        projects: 'WebApplication1/WebApplication1.csproj' # Chemin du fichier csproj à compiler
+        arguments: '--configuration $(buildConfiguration)' # On utilise la configuration Release
+    - task: DotNetCoreCLI@2  # Tâche .NET Core : exécute dotnet publish
+      displayName: "Publish du projet" # Publie l’application prête à être déployée
+      inputs:
+        command: 'publish' # Commande publish
+        publishWebProjects: true  # Indique qu’il s’agit d’un projet web
+        projects: 'WebApplication1/WebApplication1.csproj' # Chemin du projet .NET à publier
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish' # Dossier de sortie après publication
+        zipAfterPublish: true  # Crée automatiquement un fichier ZIP
+    - task: PublishBuildArtifacts@1  # Tâche qui publie les artefacts du build
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/publish'  # Chemin contenant la sortie publish
+        ArtifactName: '$(artifactName)'  # Nom donné à l’artefact publié
+        publishLocation: 'Container' # L’artefact sera stocké dans Azure DevOps (pas sur un partage externe)
+
+                                       # -------------------- STAGE INFRA --------------------
+
+- stage: DeployInfra # Deuxième stage : déploiement de l’infrastructure Azure
+  displayName: "Déploiement ARM Template" # Nom lisible affiché
+  dependsOn: Build  # Ce stage commence uniquement après la réussite du stage Build
+  jobs:
+  - job: InfraDeploy # Job responsable du déploiement ARM
+    pool: { name: 'Default' }  # Utilise le même pool d'agents
+    steps:
+    - checkout: self  # Nécessaire pour accéder aux fichiers ARM présents dans le repo
+    - task: AzureResourceManagerTemplateDeployment@3  # Tâche Azure DevOps permettant de déployer des templates ARM
+      displayName: "Déploiement de l’infrastructure Azure" # Nom affiché
+      inputs:
+        deploymentScope: 'Resource Group'  # Le template est déployé au niveau du groupe de ressources
+        azureResourceManagerConnection: '$(azureServiceConnection)' # Connexion au compte Azure
+        subscriptionId: '$(subscriptionId)' # ID de l’abonnement
+        action: 'Create Or Update Resource Group' # Déploie et met à jour sans supprimer
+        resourceGroupName: '$(resourceGroupName)' # Groupe de ressources ciblé
+        location: '$(location)' # Région Azure
+        templateLocation: 'Linked artifact' # Le template ARM se trouve dans le repo
+        csmFile: '$(Build.SourcesDirectory)/AzureRes/azuredeploy.json' # Chemin du template ARM
+        csmParametersFile: '$(Build.SourcesDirectory)/AzureRes/azuredeploy.parameters.json' # Paramètres du template ARM
+        deploymentMode: 'Incremental' # Déploiement qui ajoute/modifie sans recréer les ressources
+                             # -------------------- STAGE DEPLOIEMENT WEB --------------------
+
+- stage: DeployWebApp # Troisième stage : déploiement de la Web App
+  displayName: "Déploiement site Web" # Nom lisible affiché
+  dependsOn: DeployInfra # Ce stage démarre seulement après le déploiement de l’infrastructure
+  jobs:
+  - job: DeployJob  # Nom du job de déploiement
+    pool: { name: 'Default' } # Utilise encore le pool Default
+    steps:
+    - download: current # Télécharge les artefacts générés dans le stage Build
+      artifact: "webapp-sane-artifact" # Spécifie quel artefact télécharger
+
+                            # ---------------- DEPLOIEMENT DIRECT (premier déploiement) ----------------
+
+    - ${{ if eq(variables.firstDeployment, true) }}: # Condition YAML : si c’est le premier déploiement
+      - task: AzureWebApp@1 # Déploiement Azure Web App classique
+        displayName: "Déploiement Production" # Déploiement directement en production
+        inputs:
+          azureSubscription: '$(azureServiceConnection)' # Connexion Azure
+          appName: '$(webAppName)' # Nom de la Web App cible
+          package: '$(Pipeline.Workspace)/$(artifactName)/*.zip' # Fichier ZIP généré après publish
+          resourceGroupName: '$(resourceGroupName)' # Groupe de ressources
+                            # ---------------- DEPLOIEMENT AVEC SLOT (déploiements suivants) ----------------
+
+    - ${{ if eq(variables.firstDeployment, false) }}:  # Condition YAML : si ce n'est pas le premier déploiement
+      - task: AzureCLI@2  # Exécute un script Azure CLI pour créer un slot si absent
+        displayName: "Créer slot Staging si nécessaire" # Vérifie ou crée le slot staging
+        inputs:
+          azureSubscription: '$(azureServiceConnection)'  # Connexion Azure
+          scriptType: 'ps' # Script PowerShell
+          scriptLocation: 'inlineScript' # Le script est écrit directement dans ce fichier YAML
+          inlineScript: | # Début du script sur plusieurs lignes
+            $slotName = "staging" # Nom du slot de déploiement
+            $appName = "$(webAppName)" # Nom de la Web App
+            $rg = "$(resourceGroupName)" # Groupe de ressources
+            $slot = az webapp deployment slot list --resource-group $rg --name $appName | ConvertFrom-Json | Where-Object { $_.name -eq $slotName } # Récupère la liste des slots existants et vérifie si "staging" existe
+            if (-not $slot) {  # Si le slot n'existe pas :
+              Write-Host "Création du slot Staging..." # Message dans la console
+              az webapp deployment slot create --name $appName --resource-group $rg --slot $slotName # Création du slot
+            } else {
+              Write-Host "Le slot Staging existe déjà."  # Message si le slot est déjà présent
+            }
+
+      - task: AzureWebApp@1 # Tâche de déploiement dans un slot
+        displayName: "Déploiement Staging"  # Le déploiement se fait dans le slot Staging
+        inputs:
+          azureSubscription: '$(azureServiceConnection)' # Connexion Azure
+          appName: '$(webAppName)' # Nom de la Web App
+          package: '$(Pipeline.Workspace)/$(artifactName)/*.zip' # Le ZIP généré précédemment
+          resourceGroupName: '$(resourceGroupName)' # Groupe de ressources
+          deployToSlotOrASE: true # Indique que l’on déploie vers un slot
+          slotName: 'staging' # Nom du slot cible

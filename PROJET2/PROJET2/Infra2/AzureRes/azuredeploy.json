@@ -1,0 +1,187 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+
+  "parameters": {
+    "subscriptionId": { "type": "string" },
+    "resourceGroupName": { "type": "string" },
+    "location": { "type": "string" },
+    "webAppName": { "type": "string" },
+    "hostingPlanName": { "type": "string" },
+    "serverFarmResourceGroup": { "type": "string" },
+    "alwaysOn": { "type": "bool" },
+    "ftpsState": { "type": "string" },
+    "keyVaultName": { "type": "string" },
+    "keyVaultSku": { "type": "string" },
+    "tenant": { "type": "string" },
+    "enableRbacAuthorization": { "type": "bool" },
+    "accessPolicies": { "type": "array" },
+    "enableSoftDelete": { "type": "bool" },
+    "softDeleteRetentionInDays": { "type": "int" },
+    "publicNetworkAccess": { "type": "string" },
+    "secretName": { "type": "string" },
+    "secretValue": { "type": "securestring" },
+    "enabledForDeployment": { "type": "bool" },
+    "enabledForTemplateDeployment": { "type": "bool" },
+    "enabledForDiskEncryption": { "type": "bool" },
+    "networkAcls": { "type": "object" }
+  },
+
+  "variables": {
+    "webAppResourceId": "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]",
+    "hostingPlanResourceId": "[resourceId(parameters('serverFarmResourceGroup'), 'Microsoft.Web/serverfarms', parameters('hostingPlanName'))]"
+  },
+
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "[parameters('hostingPlanName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "Tier": "PremiumV4",
+        "Name": "P1V4"
+      },
+      "properties": {
+        "numberOfWorkers": 1,
+        "zoneRedundant": false
+      }
+    },
+
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-03-01",
+      "name": "[parameters('webAppName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]"
+      ],
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "serverFarmId": "[variables('hostingPlanResourceId')]",
+        "siteConfig": {
+          "alwaysOn": "[parameters('alwaysOn')]",
+          "ftpsState": "[parameters('ftpsState')]",
+          "appSettings": [
+            {
+              "name": "ASPNETCORE_ENVIRONMENT",
+              "value": "Production"
+            },
+            {
+              "name": "KeyVaultUri",
+              "value": "[concat('https://', parameters('keyVaultName'), '.vault.azure.net/')]"
+            }
+          ]
+        },
+        "httpsOnly": true
+      },
+      "resources": [
+        {
+          "type": "slots",
+          "apiVersion": "2022-03-01",
+          "name": "staging",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[variables('webAppResourceId')]"
+          ],
+          "properties": {
+            "siteConfig": {
+              "appSettings": [
+                {
+                  "name": "ASPNETCORE_ENVIRONMENT",
+                  "value": "Staging"
+                },
+                {
+                  "name": "KeyVaultUri",
+                  "value": "[concat('https://', parameters('keyVaultName'), '.vault.azure.net/')]"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2024-11-01",
+      "name": "[parameters('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[variables('webAppResourceId')]"
+      ],
+      "properties": {
+        "tenantId": "[parameters('tenant')]",
+        "sku": {
+          "family": "A",
+          "name": "[parameters('keyVaultSku')]"
+        },
+        "accessPolicies": [
+          {
+            "tenantId": "[parameters('tenant')]",
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2022-03-01', 'Full').identity.principalId]",
+            "permissions": {
+              "secrets": [ "get", "list" ]
+            }
+          }
+        ],
+        "enableRbacAuthorization": "[parameters('enableRbacAuthorization')]",
+        "enabledForDeployment": "[parameters('enabledForDeployment')]",
+        "enabledForTemplateDeployment": "[parameters('enabledForTemplateDeployment')]",
+        "enabledForDiskEncryption": "[parameters('enabledForDiskEncryption')]",
+        "enableSoftDelete": "[parameters('enableSoftDelete')]",
+        "softDeleteRetentionInDays": "[parameters('softDeleteRetentionInDays')]",
+        "publicNetworkAccess": "[parameters('publicNetworkAccess')]",
+        "networkAcls": "[parameters('networkAcls')]"
+      }
+    },
+
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2024-12-01-preview",
+      "name": "[concat(parameters('keyVaultName'), '/', parameters('secretName'))]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ],
+      "properties": {
+        "value": "[parameters('secretValue')]",
+        "attributes": { "enabled": true }
+      }
+    },
+
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2022-03-01",
+      "name": "[concat(parameters('webAppName'), '/appsettings')]",
+      "dependsOn": [
+        "[variables('webAppResourceId')]",
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ],
+      "properties": {
+        "KeyVaultUri": "[concat('https://', parameters('keyVaultName'), '.vault.azure.net/')]"
+      }
+    }
+  ],
+
+  "outputs": {
+    "webAppName": {
+      "type": "string",
+      "value": "[parameters('webAppName')]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "value": "[parameters('keyVaultName')]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[concat('https://', parameters('keyVaultName'), '.vault.azure.net/')]"
+    },
+    "secretName": {
+      "type": "string",
+      "value": "[parameters('secretName')]"
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "subscriptionId": {
+      "value": "f7e4aec7-e258-4531-9f5f-09883173d671"
+    },
+    "resourceGroupName": {
+      "value": "rg-webapp-sane-canadacentral"
+    },
+    "location": {
+      "value": "canadacentral"
+    },
+    "webAppName": {
+      "value": "webapp-sane-prod"
+    },
+    "hostingPlanName": {
+      "value": "asp-sane-prod"
+    },
+    "serverFarmResourceGroup": {
+      "value": "rg-webapp-sane-canadacentral"
+    },
+    "alwaysOn": {
+      "value": true
+    },
+    "ftpsState": {
+      "value": "FtpsOnly"
+    },
+    "keyVaultName": {
+      "value": "kv-sane-prod"
+    },
+    "keyVaultSku": {
+      "value": "Standard"
+    },
+    "tenant": {
+      "value": "8e1b7f9f-efbc-44e9-a19b-8e4d89da73c1"
+    },
+    "enableRbacAuthorization": {
+      "value": true
+    },
+    "accessPolicies": {
+      "value": []
+    },
+    "enableSoftDelete": {
+      "value": true
+    },
+    "softDeleteRetentionInDays": {
+      "value": 90
+    },
+    "publicNetworkAccess": {
+      "value": "Enabled"
+    },
+    "secretName": {
+      "value": "Sanoussy"
+    },
+    "secretValue": {
+      "value": "EL.Sharrawi!"
+    },
+    "enabledForDeployment": {
+      "value": true
+    },
+    "enabledForTemplateDeployment": {
+      "value": true
+    },
+    "enabledForDiskEncryption": {
+      "value": false
+    },
+    "networkAcls": {
+      "value": {
+        "bypass": "AzureServices",
+        "defaultAction": "Allow"
+      }
+    }
+  }
+}
